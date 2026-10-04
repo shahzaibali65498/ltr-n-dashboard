@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LTR-N FMC Operations Performance & GPS Intelligence Dashboard</title>
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- Required Libraries: SheetJS (Excel), Chart.js (Graphics), html2canvas (Image Export) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --ptcl-dark: #07263b;
+      --bg-color: #eaeef3;
+      --card-bg: #ffffff;
+      --ptcl-green: #1b8738;
+      --status-res: #00b050; 
+      --status-prog: #ffc000; 
+      --text-dark: #252423;
+      --text-muted: #605e5c;
+      --border-color: #edebe9;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Segoe UI", Roboto, Helvetica, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-dark); padding-bottom: 50px; }
+
+    /* Top Brand Header */
+    .top-header { background-color: var(--ptcl-dark); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .brand-left { display: flex; align-items: center; gap: 15px; }
+    .logo-text { font-size: 22px; font-weight: 900; color: #ffffff; letter-spacing: 1px; border-right: 1px solid #345168; padding-right: 15px; }
+    .logo-text span { color: #8ac249; font-weight: 400; padding-left: 4px; }
+    .header-title-box h1 { font-size: 16px; font-weight: 600; color: #ffffff; }
+    .header-title-box span { font-size: 12px; color: #e5b323; }
+
+    /* Toolbar & Navigation */
+    .toolbar { background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 8px 20px; border-bottom: 1px solid var(--border-color); }
+    .toolbar-actions { display: flex; gap: 8px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #fff; padding: 6px 14px; border-radius: 4px; border: none; cursor: pointer; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .btn-green { background-color: var(--ptcl-green); } .btn-green:hover { background-color: #156d2d; }
+    .btn-steel { background-color: #4b6e8a; } .btn-steel:hover { background-color: #3b576e; }
+    .btn-blue { background-color: #0b6fa4; } .btn-blue:hover { background-color: #095984; }
+    .btn-dark { background-color: #333; } .btn-dark:hover { background-color: #000; }
+    
+    .tab-container { display: flex; gap: 8px; }
+    .tab-btn { padding: 6px 16px; font-size: 12px; font-weight: 700; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { background: #f3f2f1; color: var(--ptcl-dark); border-color: #c8c6c4; border-bottom: 3px solid var(--ptcl-green); }
+
+    /* Power BI Style KPI Cards */
+    .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; padding: 15px 20px 0 20px; }
+    .kpi-card { background: var(--card-bg); padding: 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 3px solid #0b6fa4; display: flex; flex-direction: column; justify-content: center; }
+    .kpi-card.res { border-top-color: var(--status-res); }
+    .kpi-card.prog { border-top-color: var(--status-prog); }
+    .kpi-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 5px; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: var(--text-dark); line-height: 1; }
+
+    /* GPS Map Only */
+    .gps-map-only-card{background:var(--card-bg);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:14px}
+    .gps-map-only-header{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 10px;border-bottom:1px solid var(--border-color);margin-bottom:10px}
+    .gps-map-only-header h2{font-size:15px;font-weight:700;color:var(--text-dark);margin:0}
+    .gps-map-only-subtitle{font-size:10px;color:var(--text-muted);margin-top:4px}
+    .gps-map-only{height:calc(100vh - 235px);min-height:500px;width:100%;border-radius:3px;border:1px solid var(--border-color);background:#eef3f7}
+    .gps-route-controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-left:15px}
+    .gps-map-notice{font-size:10px;color:var(--text-muted);padding:7px 2px 0}
+    .joint-cross-marker {
+      background: transparent;
+      border: none;
+      color: #d63c3c;
+      font-size: 24px;
+      font-weight: 900;
+      line-height: 24px;
+      width: 24px !important;
+      height: 24px !important;
+      text-align: center;
+      text-shadow: 0 1px 2px rgba(255,255,255,.95);
+    }
+    /* Main View Sections */
+    .view-section { display: none; padding: 15px 20px; animation: fadeIn 0.3s; }
+    .view-section.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Power BI Style Chart Grid */
+    .analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .chart-card { background: var(--card-bg); border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 15px; }
+    .chart-card.wide { grid-column: span 2; }
+    .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--text-dark); margin-bottom: 10px; }
+    .chart-wrapper { position: relative; height: 250px; width: 100%; }
+
+    /* Filters inside Charts Area */
+    .filter-bar { grid-column: 1 / -1; display: flex; gap: 10px; background: var(--card-bg); padding: 10px 15px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .filter-bar input, .filter-bar select { padding: 6px 10px; border: 1px solid #c8c6c4; border-radius: 2px; font-size: 12px; outline: none; }
+    .filter-bar input { flex-grow: 1; }
+
+    /* Table Container */
+    .table-wrapper { height: 60vh; overflow-y: auto; background: var(--card-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 4px; }
+    table.dashboard-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    table.dashboard-table thead { position: sticky; top: 0; background: #f3f2f1; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    table.dashboard-table th { padding: 10px; text-align: left; font-weight: 600; color: var(--text-dark); border-bottom: 2px solid var(--border-color); }
+    table.dashboard-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); }
+    table.dashboard-table tbody tr:hover { background-color: #f3f2f1; }
+    
+    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 2px; color: #fff; font-size: 10px; font-weight: 700; text-align: center; min-width: 70px; }
+    .badge-restored { background-color: var(--status-res); }
+    .badge-inprogress { background-color: var(--status-prog); }
+
+    /* Modal for Pro Image Summary */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; }
+    .modal-content { background-color: #fff; padding: 20px; border-radius: 6px; width: 90%; max-width: 480px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+    .modal-header h2 { font-size: 16px; color: var(--ptcl-dark); font-weight: 600; margin: 0; }
+    .close-btn { font-size: 24px; cursor: pointer; color: var(--text-muted); transition: color 0.2s; line-height: 1; }
+    .close-btn:hover { color: #d63c3c; }
+    
+
+    /* GPS Network Intelligence */
+    .gps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+    .gps-kpi{background:var(--card-bg);border-radius:4px;padding:13px 15px;border-left:4px solid #0b6fa4;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+    .gps-kpi.green{border-left-color:var(--ptcl-green)}.gps-kpi.orange{border-left-color:#e8981c}.gps-kpi.purple{border-left-color:#6b4b81}
+    .gps-kpi-title{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700}.gps-kpi-value{margin-top:4px;font-size:24px;font-weight:800;color:var(--text-dark)}
+    .gps-controls{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card-bg);padding:10px 15px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+    .gps-controls label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase}.gps-controls select{padding:6px 9px;border:1px solid #c8c6c4;border-radius:3px;font-size:11px;background:#fff}.gps-info{font-size:10px;color:var(--text-muted);margin-left:auto}
+    .gps-map-card{grid-column:span 2;background:var(--card-bg);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:12px}.gps-map{height:390px;width:100%;border-radius:3px;border:1px solid var(--border-color);background:#eef3f7}
+    .gps-chart-card{background:var(--card-bg);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:12px}
+    .gps-table-card{grid-column:1/-1;background:var(--card-bg);border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:12px;overflow:auto}
+    .gps-table-title{font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:8px;text-transform:uppercase}.gps-table{width:100%;border-collapse:collapse;font-size:10px}
+    .gps-table th{background:#f3f2f1;color:var(--text-dark);padding:7px 8px;text-align:left;border-bottom:2px solid var(--border-color);white-space:nowrap}.gps-table td{padding:7px 8px;border-bottom:1px solid var(--border-color);white-space:nowrap}
+    .gps-table tr:hover{background:#f8fafc}.gps-badge{display:inline-block;padding:3px 6px;border-radius:10px;font-size:9px;font-weight:800}.gps-badge.repeat{background:#fee2e2;color:#b91c1c}.gps-badge.focus{background:#fff7ed;color:#c2410c}
+    .gps-empty{padding:30px 15px;text-align:center;color:var(--text-muted);font-size:12px}.gps-note{grid-column:1/-1;font-size:10px;color:var(--text-muted);background:#fff;border-left:3px solid #0b6fa4;padding:8px 10px}.gps-footer{margin-top:15px}
+    .table-search-bar{display:flex;align-items:center;gap:8px;background:#fff;padding:9px 12px;margin-bottom:10px;border-radius:4px;border:1px solid var(--border-color);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .table-search-bar i{color:var(--text-muted)}.table-search-bar input{width:100%;padding:7px 9px;border:1px solid #c8c6c4;border-radius:3px;font-size:11px;outline:none}
+    .comparison-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}.comparison-controls{display:flex;gap:8px;flex-wrap:wrap}
+    .comparison-select-group{display:flex;flex-direction:column;gap:3px}.comparison-select-group label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase}
+    .comparison-controls select{padding:7px 10px;border:1px solid #c8c6c4;border-radius:3px;background:#fff;color:var(--text-dark);font-size:11px;min-width:150px}.comparison-note{font-size:10px;color:var(--text-muted);margin:-3px 0 8px}
+    .network-details-panel{margin-top:14px;background:var(--card-bg);border:1px solid var(--border-color);border-radius:4px;padding:10px 15px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .network-details-title{font-size:10px;font-weight:800;color:var(--ptcl-dark);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}.network-services-list{font-size:12px;font-weight:800;color:#1b365d;text-align:center}
+    .network-services-list span{color:#6b4b81;margin:0 4px}.network-services-subtitle{text-align:center;margin-top:3px;font-size:8px;font-weight:700;color:#7b8e9d;letter-spacing:1px}.network-attribution{margin-top:4px;text-align:center;color:var(--ptcl-green);font-size:9px;font-weight:700}
+    @media(max-width:1100px){.gps-grid{grid-template-columns:1fr 1fr}.gps-map-card{grid-column:1/-1}}@media(max-width:700px){.gps-grid{grid-template-columns:1fr}.gps-map-card{grid-column:1}.gps-info{margin-left:0;width:100%}}
+
+    /* Footer Attribution */
+    .attribution-text { position: fixed; bottom: 10px; right: 20px; color: #8a8886; font-size: 10px; font-weight: 600; text-align: right; z-index: 50; }
+  
+    .management-banner{margin:10px 20px 0;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1b8738;border-radius:4px;font-size:11px;color:#475569;font-weight:600;}
+  
+    .pro-report-modal{max-width:620px!important;max-height:92vh;overflow:auto}.pro-report-card{width:100%;background:#fff;border:1px solid #dbe3ea;box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif}.pro-report-head{background:#07263b;padding:20px;text-align:center;border-bottom:5px solid #8ac249}.pro-brand{font-size:27px;font-weight:900;color:#fff;letter-spacing:1px}.pro-brand span{color:#8ac249;font-weight:400}.pro-title{margin-top:6px;color:#d8e5f0;font-size:13px;font-weight:800;letter-spacing:1px}.pro-date{margin-top:5px;color:#d8e5f0;font-size:11px}.pro-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px;background:#f8fafc}.pro-kpis div{text-align:center;border:1px solid #e2e8f0;border-radius:5px;padding:10px 5px;background:#fff}.pro-kpis small{display:block;font-size:8px;font-weight:800;color:#64748b}.pro-kpis strong{display:block;font-size:23px;color:#07263b;margin-top:3px}.okText,.pro-domain-table .ok{color:#00a04a!important}.warnText,.pro-domain-table .warn{color:#e8981c!important}.pro-section-title{font-size:12px;font-weight:900;color:#475569;padding:12px 14px 7px;letter-spacing:.7px}.pro-domain-table{width:calc(100% - 28px);margin:0 14px 15px;border-collapse:collapse;font-size:10px}.pro-domain-table th{background:#07263b;color:#fff;padding:8px;text-align:center}.pro-domain-table th:first-child{text-align:left}.pro-domain-table td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700}.pro-domain-table td:first-child{text-align:left}.pro-footer{text-align:center;background:#f8fafc;border-top:1px solid #e2e8f0;padding:10px;color:#07263b;font-size:9px;font-weight:800}.pro-footer span{color:#64748b;font-weight:600}@media(max-width:650px){.pro-kpis{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+
+  <!-- Hidden File Input -->
+  <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" />
+  <input type="file" id="kmzFileInput" accept=".kmz,.kml" style="display: none;" />
+
+  <!-- Hidden Off-Screen Container for Pro Infographic Generation -->
+  <div style="position: fixed; top: -10000px; left: -10000px; z-index: -1;">
+    <div id="infographicCard" style="width: 450px; background: #ffffff; font-family: 'Segoe UI', Arial, sans-serif; box-sizing: border-box; border: 1px solid #e2e8f0;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #07263b 0%, #1b365d 100%); padding: 25px 20px; text-align: center; border-bottom: 5px solid #8ac249;">
+        <h2 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 900; letter-spacing: 1px;">PTCL <span style="color: #8ac249; font-weight: 400;">| LTR-N</span></h2>
+        <p style="margin: 8px 0 0; color: #d8e5f0; font-size: 16px; font-weight: 600; letter-spacing: 0.5px;">DAILY OPERATIONS SUMMARY</p>
+        <p id="infoDate" style="margin: 10px 0 0; font-size: 13px; font-weight: 700; color: #e5b323; background: rgba(255,255,255,0.1); display: inline-block; padding: 5px 15px; border-radius: 15px;"></p>
+      </div>
+      
+      <!-- KPIs -->
+      <div style="padding: 25px 20px;">
+        <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 25px;">
+          <div style="flex: 1; background: #f8fafc; padding: 15px 5px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; border-top: 4px solid #0b6fa4;">
+            <div id="infoTotal" style="font-size: 34px; font-weight: 800; color: #07263b; line-height: 1;">0</div>
+            <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 8px; letter-spacing: 0.5px;">TOTAL FAULTS</div>
+          </div>
+          <div style="flex: 1; background: #f8fafc; padding: 15px 5px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; border-top: 4px solid #00b050;">
+            <div id="infoRes" style="font-size: 34px; font-weight: 800; color: #00b050; line-height: 1;">0</div>
+            <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 8px; letter-spacing: 0.5px;">RESOLVED</div>
+          </div>
+          <div style="flex: 1; background: #f8fafc; padding: 15px 5px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; border-top: 4px solid #ffc000;">
+            <div id="infoProg" style="font-size: 34px; font-weight: 800; color: #e8981c; line-height: 1;">0</div>
+            <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 8px; letter-spacing: 0.5px;">IN PROGRESS</div>
+          </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div style="margin-bottom: 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+            <span style="font-size: 14px; font-weight: 700; color: #334155;">Resolution Progress</span>
+            <span id="infoRate" style="font-size: 20px; font-weight: 900; color: #00b050;">0%</span>
+          </div>
+          <div style="height: 14px; background: #e2e8f0; border-radius: 7px; overflow: hidden;">
+            <div id="infoBar" style="height: 100%; background: #00b050; width: 0%; border-radius: 7px;"></div>
+          </div>
+        </div>
+
+        <!-- Breakdown Lists -->
+        <div style="display: flex; gap: 20px;">
+          <div style="flex: 1;">
+            <h4 style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 0 0 12px 0;">Top Domains</h4>
+            <div id="infoDomains" style="font-size: 14px; color: #1e293b;"></div>
+          </div>
+          <div style="flex: 1;">
+            <h4 style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 0 0 12px 0;">Top Teams</h4>
+            <div id="infoTeams" style="font-size: 14px; color: #1e293b;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div style="background: #f8fafc; padding: 15px 20px; text-align: center; border-top: 1px solid #e2e8f0;">
+        <p style="margin: 0; font-size: 12px; font-weight: 800; color: #07263b;">NETWORK SERVICES - LTR NORTH</p>
+        <p style="margin: 4px 0 0; font-size: 11px; color: #64748b; font-weight: 600;">Compiled by: Engr. Mr. Shahzaib Ali Khan</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="top-header">
+    <div class="brand-left">
+      <div class="logo-text">PTCL <span>| LTR-N</span></div>
+      <div class="header-title-box">
+        <h1>LTR-N FMC Operations Performance Dashboard</h1>
+        <span id="currentDateDisplay"></span>
+      </div>
+    </div>
+    <div class="tab-container" id="tabsArea" style="display: none;">
+      <button class="tab-btn active" onclick="switchTab('dashboardTab', this)"><i class="fa-solid fa-chart-line"></i> Analytics View</button>
+      <button class="tab-btn" onclick="switchTab('gpsTab', this)"><i class="fa-solid fa-location-dot"></i> GPS Location Map</button>
+      <button class="tab-btn" onclick="switchTab('logsTab', this)"><i class="fa-solid fa-table"></i> Data Table View</button>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <nav class="toolbar">
+    <div class="toolbar-actions">
+      <button class="btn btn-blue" onclick="refreshData();"><i class="fa-solid fa-arrows-rotate"></i> Refresh Data</button>
+    </div>
+    <div class="toolbar-actions">
+      <div id="statusFilename" style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-right: 15px;">Awaiting Data...</div>
+      <button class="btn btn-dark" onclick="generateProSummary()" id="reportBtn" style="display:none;"><i class="fa-solid fa-image"></i> Share Daily Summary (Pro)</button>
+    </div>
+  </nav>
+
+  <div class="management-banner"><i class="fa-solid fa-eye"></i> Management View — Live Google Sheet data • Read Only</div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-container">
+    <div class="kpi-card">
+      <div class="kpi-title">Total Activities Logged</div>
+      <div class="kpi-value" id="countTotal">0</div>
+    </div>
+    <div class="kpi-card res">
+      <div class="kpi-title">Faults Resolved</div>
+      <div class="kpi-value" id="countResolved" style="color: var(--status-res);">0</div>
+    </div>
+    <div class="kpi-card prog">
+      <div class="kpi-title">Activities In Progress</div>
+      <div class="kpi-value" id="countInProgress" style="color: var(--status-prog);">0</div>
+    </div>
+    <div class="kpi-card" style="border-top-color: #6b4b81;">
+      <div class="kpi-title">Resolution Rate</div>
+      <div class="kpi-value" id="resolutionRate">0%</div>
+    </div>
+  </div>
+
+  <!-- TAB 1: Analytics Dashboard -->
+  <div id="dashboardTab" class="view-section active">
+    <div class="analytics-grid" id="captureAreaCharts">
+      
+      <!-- Filters -->
+      <div class="filter-bar">
+        <i class="fa-solid fa-filter" style="color: var(--text-muted); margin-top: 8px;"></i>
+        <input type="text" id="globalSearch" placeholder="Filter by Domain, Team, or Keyword..." onkeyup="applyFilters()">
+        <select id="statusFilter" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+          <option value="resolved">Resolved</option>
+          <option value="in progress">In Progress</option>
+        </select>
+      </div>
+
+      <!-- Charts -->
+      <div class="chart-card">
+        <h3>Status Breakdown</h3>
+        <div class="chart-wrapper"><canvas id="statusChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>Faults by Domain</h3>
+        <div class="chart-wrapper"><canvas id="categoryChart"></canvas></div>
+      </div>
+      <div class="chart-card wide" style="grid-column: span 1;">
+        <h3>Team Performance (Top 10)</h3>
+        <div class="chart-wrapper"><canvas id="teamChart"></canvas></div>
+      </div>
+
+      <div class="chart-card wide" style="grid-column: span 2;">
+        <div class="comparison-header">
+          <h3>Custom Two-Column Data Visualization</h3>
+          <div class="comparison-controls">
+            <div class="comparison-select-group"><label for="comparisonColumn1">Column 1</label>
+              <select id="comparisonColumn1" onchange="updateComparisonChart()"><option value="">Choose Column 1</option></select>
+            </div>
+            <div class="comparison-select-group"><label for="comparisonColumn2">Column 2</label>
+              <select id="comparisonColumn2" onchange="updateComparisonChart()"><option value="">Choose Column 2</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="comparison-note" id="comparisonSourceLabel">Choose any two columns from the loaded data.</div>
+        <div class="chart-wrapper"><canvas id="comparisonChart"></canvas></div>
+      </div>
+    </div>
+    <div class="network-details-panel">
+      <div class="network-details-title"><i class="fa-solid fa-network-wired"></i> Network Services</div>
+      <div class="network-services-list">Metro <span>|</span> Access <span>|</span> GPON <span>|</span> Corporate <span>|</span> Carrier</div>
+      <div class="network-services-subtitle">NETWORK SERVICES - LTR NORTH</div>
+      <div class="network-attribution">Compiled by: Engr. Mr. Shahzaib Ali Khan</div>
+    </div>
+  </div>
+
+  <!-- TAB 3: GPS Location Map -->
+  <div id="gpsTab" class="view-section">
+    <div class="gps-map-only-card">
+      <div class="gps-map-only-header">
+        <div>
+          <h2><i class="fa-solid fa-location-dot"></i> Joint GPS Location Map</h2>
+          <div class="gps-map-only-subtitle" id="gpsMapStatus">Each × marks a joint GPS location from the loaded Excel / Google Sheet data</div>
+        </div>
+        <div class="gps-route-controls"><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Management View • Read Only</span></div>
+      </div>
+      <div id="gpsMap" class="gps-map gps-map-only"></div>
+      <div id="gpsMapNotice" class="gps-map-notice">Upload a KMZ/KML route to overlay the network route on the joint GPS map.</div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Data Table -->
+
+  <div id="logsTab" class="view-section">
+    <div class="table-search-bar"><i class="fa-solid fa-magnifying-glass"></i><input type="text" id="tableSearch" placeholder="Search the data table..." onkeyup="applyTableSearch()" autocomplete="off"></div>
+    <div class="table-wrapper">
+      <table class="dashboard-table" id="mainTable">
+        <thead id="dashboardHead"></thead>
+        <tbody id="dashboardBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal: Pro Image Output -->
+  <div id="reportModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-image" style="color:#0b6fa4;"></i> Pro Daily Summary (Picture Format)</h2>
+        <span class="close-btn" onclick="document.getElementById('reportModal').style.display='none'">&times;</span>
+      </div>
+      
+      <div style="background: #f2f5f9; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+          <!-- The generated image will appear here -->
+          <img id="reportImagePreview" src="" style="width: 100%; max-height: 50vh; object-fit: contain; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-green" onclick="downloadInfographic()"><i class="fa-solid fa-download"></i> Download Picture for WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="attribution-text">Compiled and designed by : Engr. Mr. Shahzaib Ali Khan</div>
+
+  <script>
+    let currentOnlineUrl = "";
+    let globalRawData = [];
+    let currentFilteredData = [];
+    let globalHeaders = [];
+    let statusChartInst = null;
+    let categoryChartInst = null;
+    let teamChartInst = null;
+    let comparisonChartInst = null;
+    let gpsJointFrequencyChartInst = null;
+    let gpsSectionDensityChartInst = null;
+    let gpsMap = null;
+    let gpsMapMarkers = [];
+    let kmzRouteLayers = [];
+    let kmzRouteFitBounds = [];
+
+    // Management View: fixed live Google Sheet data source
+    const MANAGEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1-xZROqLMnz9eIsUJ6ydo7vRKsLDRm606j-EptDi3YXY/edit?usp=sharing';
+
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Safe text helper used by the Pro Daily Summary.
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>\"']/g, function(ch) {
+        return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;", "'":"&#39;"}[ch];
+      });
+    }
+    document.getElementById("currentDateDisplay").innerText = formattedDate;
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+      if(tabId === 'gpsTab' && gpsMap) setTimeout(() => gpsMap.invalidateSize(), 80);
+    }
+
+    // --- Local Excel Upload ---
+    document.getElementById("excelFileInput").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      currentOnlineUrl = ""; 
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const workbook = XLSX.read(evt.target.result, { type: "array" });
+          parseWorkbook(workbook, `Local File: ${file.name}`);
+        } catch (err) { alert("Error parsing file: " + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // --- KMZ / KML ROUTE UPLOAD ---
+    document.getElementById("kmzFileInput").addEventListener("change", async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        await loadKmzRoute(file);
+      } catch (err) {
+        console.error(err);
+        const notice = document.getElementById("gpsMapNotice");
+        if (notice) notice.textContent = `KMZ/KML error: ${err.message}`;
+        alert("KMZ/KML route error:\n" + err.message);
+      } finally {
+        e.target.value = "";
+      }
+    });
+
+    // --- GOOGLE SHEETS LOGIC (BULLETPROOF JSONP BYPASS) ---
+    function promptExcelUrl() {
+      alert("Management View is read-only. The Google Sheet data source is fixed by the administrator.");
+    }
+
+    function refreshData() {
+      currentOnlineUrl = MANAGEMENT_SHEET_URL;
+      fetchOnlineData(MANAGEMENT_SHEET_URL);
+    }
+
+    function getStandardSheetInfo(userUrl) {
+      let url;
+      try { url = new URL(userUrl); } catch (e) { throw new Error("The URL is not valid."); }
+      const match = url.pathname.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/i);
+      if (!match) throw new Error("Could not find the Google Sheet ID. Use the standard /d/SHEET_ID/edit link.");
+      let gid = url.searchParams.get("gid") || "0";
+      if (!url.searchParams.get("gid") && url.hash) {
+        const m = url.hash.match(/(?:^|[?&])gid=([^&]+)/i);
+        if (m) gid = m[1];
+      }
+      return { id: match[1], gid: gid };
+    }
+
+    function fetchGoogleJsonp(info, timeoutMs = 15000) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "ltrSheetCallback_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+        const script = document.createElement("script");
+        let finished = false;
+        const cleanup = () => {
+          if (script.parentNode) script.parentNode.removeChild(script);
+          try { delete window[callbackName]; } catch (e) {}
+          clearTimeout(timer);
+        };
+        const timer = setTimeout(() => {
+          if (finished) return;
+          finished = true; cleanup(); reject(new Error("Connection timed out."));
+        }, timeoutMs);
+
+        window[callbackName] = function(response) {
+          if (finished) return;
+          finished = true; cleanup();
+          try {
+            if (!response || response.status !== "ok") throw new Error("Google did not return data.");
+            const cols = (response.table && response.table.cols) || [];
+            const rows = (response.table && response.table.rows) || [];
+            let headers = cols.map(c => c && c.label ? c.label.trim() : "");
+            let dataRows = rows;
+            if (headers.every(h => h === "") && rows.length > 0) {
+              const firstRow = rows[0].c || [];
+              headers = firstRow.map(cell => cell && cell.v != null ? String(cell.v).trim() : "");
+              dataRows = rows.slice(1);
+            }
+            headers = headers.map((h, i) => h || `Col ${i + 1}`);
+            resolve(dataRows.map(row => {
+              const obj = {};
+              headers.forEach((h, i) => {
+                const cell = row.c && row.c[i];
+                obj[h] = cell && cell.f != null ? cell.f : (cell && cell.v != null ? cell.v : "");
+              });
+              return obj;
+            }));
+          } catch (err) { reject(err); }
+        };
+
+        script.onerror = () => { if (!finished) { finished = true; cleanup(); reject(new Error("Google blocked the request.")); } };
+        const tqx = `out:json;responseHandler:${callbackName}`;
+        script.src = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(info.id)}/gviz/tq?gid=${encodeURIComponent(info.gid)}&headers=1&tqx=${encodeURIComponent(tqx)}`;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function fetchOnlineData(url) {
+      document.getElementById("statusFilename").innerHTML = "<em>Connecting securely to Google Sheets...</em>";
+      try {
+        const info = getStandardSheetInfo(url);
+        const data = await fetchGoogleJsonp(info);
+        if (!data.length) throw new Error("No data rows returned.");
+        processCleanData(data, "Live Google Sheet");
+      } catch (err) {
+        console.error(err);
+        document.getElementById("statusFilename").innerHTML = `<span style="color:#d63c3c;"><strong>Error:</strong> ${escapeHtml(err.message)}</span>`;
+      }
+    }
+
+    function parseWorkbook(workbook, sourceName) {
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawArray = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", raw: false });
+      
+      let validData = [];
+      if (rawArray.length > 0) {
+        const headers = rawArray[0].map((h, i) => String(h).trim() || `Col ${i + 1}`);
+        for(let i = 1; i < rawArray.length; i++) {
+          if (rawArray[i].some(val => String(val).trim() !== "")) {
+            const obj = {};
+            headers.forEach((h, j) => obj[h] = rawArray[i][j] !== undefined ? rawArray[i][j] : "");
+            validData.push(obj);
+          }
+        }
+      }
+      processCleanData(validData, sourceName);
+    }
+
+    function processCleanData(data, sourceName) {
+      if(!data || data.length === 0) return alert("No valid data found.");
+      globalRawData = data;
+      currentFilteredData = data;
+      const ts = document.getElementById("tableSearch");
+      if (ts) ts.value = "";
+      globalHeaders = [];
+      data.forEach(row => { Object.keys(row).forEach(key => { if (!globalHeaders.includes(key)) globalHeaders.push(key); }); });
+      
+      document.getElementById("tabsArea").style.display = "flex";
+      document.getElementById("reportBtn").style.display = "inline-flex";
+      document.getElementById("statusFilename").innerHTML = `<i class="fa-solid fa-cloud-arrow-down" style="color: #0b6fa4;"></i> ${sourceName} - ${data.length} records`;
+      
+      applyFilters();
+    }
+
+    // --- Analytics & Rendering ---
+    function applyFilters() {
+      const searchTerm = document.getElementById("globalSearch").value.toLowerCase();
+      const statusFilter = document.getElementById("statusFilter").value.toLowerCase();
+      const statusKey = globalHeaders.find(h => h.toLowerCase().includes("status"));
+
+      currentFilteredData = globalRawData.filter(row => {
+        let statusMatch = true;
+        if (statusFilter && statusKey) {
+            const val = String(row[statusKey]).toLowerCase();
+            const isResolved = val.includes("resolved") || val === "done" || val === "restored";
+            if (statusFilter === "resolved" && !isResolved) statusMatch = false;
+            if (statusFilter === "in progress" && isResolved) statusMatch = false;
+        }
+        let textMatch = true;
+        if (searchTerm !== "") textMatch = Object.values(row).some(val => String(val).toLowerCase().includes(searchTerm));
+        return statusMatch && textMatch;
+      });
+
+      renderTable(getTableDisplayData());
+      renderAnalytics(currentFilteredData);
+      renderGpsLocationsOnly(currentFilteredData);
+    }
+
+    function getTableDisplayData() {
+      const input = document.getElementById("tableSearch");
+      const term = input ? input.value.trim().toLowerCase() : "";
+      if (!term) return currentFilteredData || [];
+      return (currentFilteredData || []).filter(row =>
+        Object.values(row).some(val => String(val ?? "").toLowerCase().includes(term))
+      );
+    }
+
+    function applyTableSearch() {
+      renderTable(getTableDisplayData());
+    }
+
+    function renderTable(data) {
+      const thead = document.getElementById("dashboardHead");
+      const tbody = document.getElementById("dashboardBody");
+      thead.innerHTML = ""; tbody.innerHTML = "";
+
+      const headRow = document.createElement("tr");
+      globalHeaders.forEach(h => {
+        const th = document.createElement("th"); th.innerText = h;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+
+      let resCount = 0; let progCount = 0;
+
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        globalHeaders.forEach(h => {
+          const td = document.createElement("td");
+          let val = row[h] !== undefined ? row[h] : "";
+          if (h.toLowerCase().includes("status")) {
+            const s = String(val).trim();
+            const isRes = s.toLowerCase().includes("resolved") || s.toLowerCase() === "restored";
+            if (s) { if (isRes) resCount++; else progCount++; }
+            let badgeClass = isRes ? "badge-restored" : (s.toLowerCase().includes("progress") ? "badge-inprogress" : "");
+            td.innerHTML = `<span class="status-badge ${badgeClass}">${s}</span>`;
+          } else {
+            td.innerText = val;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("countResolved").innerText = resCount;
+      document.getElementById("countInProgress").innerText = progCount;
+      document.getElementById("countTotal").innerText = data.length;
+      
+      let rate = data.length > 0 ? Math.round((resCount / data.length) * 100) : 0;
+      document.getElementById("resolutionRate").innerText = rate + "%";
+    }
+
+    function renderAnalytics(data) {
+      if (statusChartInst) statusChartInst.destroy();
+      if (categoryChartInst) categoryChartInst.destroy();
+      if (teamChartInst) teamChartInst.destroy();
+      if (comparisonChartInst) comparisonChartInst.destroy();
+      populateComparisonColumns(data);
+      if (data.length === 0) return;
+
+      Chart.defaults.font.family = '"Segoe UI", Roboto, sans-serif';
+      Chart.defaults.color = '#605e5c';
+
+      const statusKey = globalHeaders.find(h => h.toLowerCase().includes("status"));
+      let resCount = 0, progCount = 0;
+      if (statusKey) {
+        data.forEach(row => {
+           const val = String(row[statusKey]).toLowerCase();
+           if(val.includes("resolved") || val === "restored") resCount++; else if(val !== "") progCount++;
+        });
+      }
+      statusChartInst = new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: { labels: ['Resolved', 'In Progress'], datasets: [{ data: [resCount, progCount], backgroundColor: ['#00b050', '#ffc000'], borderWidth: 2, borderColor: '#fff' }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, cutout: '65%' }
+      });
+
+      const domainKey = globalHeaders.find(h => h.toLowerCase().includes("domain")) || globalHeaders[3];
+      if (domainKey) {
+        const counts = {};
+        data.forEach(row => { let val = String(row[domainKey]).trim() || "Unknown"; counts[val] = (counts[val] || 0) + 1; });
+        categoryChartInst = new Chart(document.getElementById('categoryChart'), {
+          type: 'bar',
+          data: { labels: Object.keys(counts), datasets: [{ label: 'Faults', data: Object.values(counts), backgroundColor: '#0b6fa4' }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#edebe9' } }, x: { grid: { display: false } } } }
+        });
+      }
+
+      const teamKey = globalHeaders.find(h => h.toLowerCase().includes("resolved by") || h.toLowerCase().includes("team"));
+      if (teamKey) {
+        const teamCounts = {};
+        data.forEach(row => { let val = String(row[teamKey]).trim() || "Unassigned"; teamCounts[val] = (teamCounts[val] || 0) + 1; });
+        const sortedTeams = Object.keys(teamCounts).sort((a,b) => teamCounts[b] - teamCounts[a]).slice(0, 10);
+        const teamLabels = []; const teamData = [];
+        sortedTeams.forEach(k => { teamLabels.push(k); teamData.push(teamCounts[k]); });
+
+        teamChartInst = new Chart(document.getElementById('teamChart'), {
+          type: 'bar',
+          data: { labels: teamLabels, datasets: [{ label: 'Activities', data: teamData, backgroundColor: '#1b8738' }] },
+          options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#edebe9' } }, y: { grid: { display: false } } } }
+        });
+      }
+    }
+
+
+    // --- CUSTOM TWO-COLUMN DATA VISUALIZATION ---
+    function isNumericValue(value) {
+      if (value === null || value === undefined || String(value).trim() === "") return false;
+      return Number.isFinite(Number(String(value).replace(/,/g,"").trim()));
+    }
+
+    function numericColumnScore(data,key) {
+      const vals=data.map(r=>r[key]).filter(v=>String(v??"").trim()!=="");
+      return vals.length?vals.filter(isNumericValue).length/vals.length:0;
+    }
+
+    function populateComparisonColumns(data) {
+      const s1=document.getElementById("comparisonColumn1"),s2=document.getElementById("comparisonColumn2"),note=document.getElementById("comparisonSourceLabel");
+      if(!s1||!s2)return;
+      const old1=s1.value,old2=s2.value;
+      s1.innerHTML='<option value="">Choose Column 1</option>';s2.innerHTML='<option value="">Choose Column 2</option>';
+      globalHeaders.forEach(h=>{
+        const a=document.createElement("option");a.value=h;a.textContent=h;s1.appendChild(a);
+        const b=document.createElement("option");b.value=h;b.textContent=h;s2.appendChild(b);
+      });
+      if(globalHeaders.includes(old1))s1.value=old1;if(globalHeaders.includes(old2))s2.value=old2;
+      note.textContent=globalHeaders.length?`Select any two columns from the loaded dataset (${globalHeaders.length} columns available).`:"Load data first, then select any two columns.";
+      updateComparisonChart();
+    }
+
+    function updateComparisonChart() {
+      const canvas=document.getElementById("comparisonChart"),s1=document.getElementById("comparisonColumn1"),s2=document.getElementById("comparisonColumn2"),note=document.getElementById("comparisonSourceLabel");
+      if(!canvas||!s1||!s2)return;
+      if(comparisonChartInst){comparisonChartInst.destroy();comparisonChartInst=null;}
+      const c1=s1.value,c2=s2.value,data=currentFilteredData||[];
+      if(!c1||!c2){note.textContent="Choose any two columns from the loaded data.";return;}
+      if(c1===c2){note.textContent="Please choose two different columns.";return;}
+      if(!data.length){note.textContent="No data available for the selected filters.";return;}
+      const sc1=numericColumnScore(data,c1),sc2=numericColumnScore(data,c2);
+      if(sc1>=.7&&sc2>=.7){
+        const pts=data.map((r,i)=>({x:Number(String(r[c1]).replace(/,/g,"")),y:Number(String(r[c2]).replace(/,/g,"")),row:i+1})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)).slice(0,1500);
+        comparisonChartInst=new Chart(canvas,{type:"scatter",data:{datasets:[{label:`${c1} vs ${c2}`,data:pts,backgroundColor:"#0b6fa4",pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:"bottom"}},scales:{x:{type:"linear",title:{display:true,text:c1}},y:{beginAtZero:true,title:{display:true,text:c2}}}}});
+        note.textContent=`${c1} vs ${c2} — ${pts.length} plotted records`;return;
+      }
+      if(sc2>=.7){
+        const g={};data.forEach(r=>{const k=String(r[c1]??"").trim()||"Blank",n=Number(String(r[c2]??"").replace(/,/g,""));if(Number.isFinite(n))g[k]=(g[k]||0)+n;});
+        const e=Object.entries(g).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,20);
+        comparisonChartInst=new Chart(canvas,{type:"bar",data:{labels:e.map(x=>x[0]),datasets:[{label:c2,data:e.map(x=>x[1]),backgroundColor:"#0b6fa4"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:"bottom"}},scales:{y:{beginAtZero:true,title:{display:true,text:c2}},x:{title:{display:true,text:c1},grid:{display:false}}}}});
+        note.textContent=`${c1} by ${c2} — top 20 categories shown`;return;
+      }
+      const pairs={};data.forEach(r=>{const a=String(r[c1]??"").trim()||"Blank",b=String(r[c2]??"").trim()||"Blank",k=`${a}|||${b}`;pairs[k]=(pairs[k]||0)+1;});
+      const top=Object.entries(pairs).sort((a,b)=>b[1]-a[1]).slice(0,20).map(([k,n])=>({label:k.split("|||").join(" • "),count:n}));
+      comparisonChartInst=new Chart(canvas,{type:"bar",data:{labels:top.map(p=>p.label),datasets:[{label:"Records",data:top.map(p=>p.count),backgroundColor:"#6b4b81"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:"bottom"}},scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{grid:{display:false}}}}});
+      note.textContent=`${c1} × ${c2} — top 20 value combinations shown`;
+    }
+
+    // --- GPS NETWORK INTELLIGENCE ---
+    function findHeader(patterns,exacts=[]) {
+      const arr=globalHeaders.map(h=>({h,l:h.toLowerCase()}));
+      for(const x of exacts){const f=arr.find(a=>a.l===x.toLowerCase());if(f)return f.h;}
+      for(const p of patterns){const f=arr.find(a=>a.l.includes(p.toLowerCase()));if(f)return f.h;}
+      return null;
+    }
+
+    function detectGpsFields() {
+      return {
+        lat:findHeader(["latitude","gps lat","lat."],["lat","latitude"]),
+        lon:findHeader(["longitude","gps long","gps lng","lon.","lng"],["lon","longitude","lng"]),
+        joint:findHeader(["joint id","joint no","joint number","closure id","splice id","joint"],["joint id","joint"]),
+        section:findHeader(["section","route","segment"],["section","route"]),
+        status:findHeader(["status"]),
+        faultId:findHeader(["fault id","tt id","ticket id","fault no","tt no","complaint id"]),
+        length:findHeader(["section length","route length","length (km)","length km","route km"])
+      };
+    }
+
+    function parseCoordinate(value) {
+      if(value===null||value===undefined)return null;
+      const raw=String(value).trim();if(!raw)return null;
+      const pair=raw.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+      if(pair)return {lat:Number(pair[1]),lon:Number(pair[2])};
+      const n=Number(raw.replace(/,/g,""));return Number.isFinite(n)?n:null;
+    }
+
+    function parseLatLon(row,fields) {
+      const lat=fields.lat?parseCoordinate(row[fields.lat]):null,lon=fields.lon?parseCoordinate(row[fields.lon]):null;
+      if(typeof lat==="number"&&typeof lon==="number"&&Math.abs(lat)<=90&&Math.abs(lon)<=180)return {lat,lon};
+      const gpsKey=globalHeaders.find(h=>/gps|coordinate/i.test(h));
+      if(gpsKey){const p=parseCoordinate(row[gpsKey]);if(p&&typeof p==="object"&&Math.abs(p.lat)<=90&&Math.abs(p.lon)<=180)return p;}
+      return null;
+    }
+
+    function haversineMeters(a,b){
+      const R=6371000,p1=a.lat*Math.PI/180,p2=b.lat*Math.PI/180,dp=(b.lat-a.lat)*Math.PI/180,dl=(b.lon-a.lon)*Math.PI/180;
+      const x=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;return 2*R*Math.asin(Math.sqrt(x));
+    }
+
+    function clusterGpsRecords(records,radiusMeters){
+      const clusters=[],cellSize=Math.max(radiusMeters/111000,.00005),grid=new Map();
+      const ck=(lat,lon)=>`${Math.floor(lat/cellSize)},${Math.floor(lon/cellSize)}`;
+      records.forEach(rec=>{
+        const key=ck(rec.lat,rec.lon),[ri,rj]=key.split(",").map(Number);let found=null;
+        for(let di=-1;di<=1&&!found;di++)for(let dj=-1;dj<=1&&!found;dj++){
+          const arr=grid.get(`${ri+di},${rj+dj}`)||[];
+          for(const ci of arr){if(haversineMeters(rec,clusters[ci].center)<=radiusMeters){found=clusters[ci];break;}}
+        }
+        if(!found){found={id:clusters.length+1,center:{lat:rec.lat,lon:rec.lon},records:[]};clusters.push(found);if(!grid.has(key))grid.set(key,[]);grid.get(key).push(clusters.length-1);}
+        found.records.push(rec);const n=found.records.length;found.center.lat=(found.center.lat*(n-1)+rec.lat)/n;found.center.lon=(found.center.lon*(n-1)+rec.lon)/n;
+      });
+      return clusters;
+    }
+
+    function uniqueNonBlank(values){return new Set(values.filter(v=>String(v??"").trim()!=="").map(v=>String(v).trim())).size;}
+
+    function sectionLength(rows,key){
+      if(!key)return null;const nums=rows.map(r=>Number(String(r[key]??"").replace(/,/g,""))).filter(n=>Number.isFinite(n)&&n>0);return nums.length?nums[0]:null;
+    }
+
+    function fillGpsSelect(id,current){
+      const sel=document.getElementById(id);if(!sel)return;const keep=current||sel.value;
+      sel.innerHTML='<option value="__auto__">Auto Detect</option>';
+      globalHeaders.forEach(h=>{const o=document.createElement("option");o.value=h;o.textContent=h;sel.appendChild(o);});
+      sel.value=(keep==="__auto__"||globalHeaders.includes(keep))?keep:"__auto__";
+    }
+
+    function normalizeHeaderName(value){
+      return String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g,"");
+    }
+
+    function getGpsMapFields(){
+      const headers = globalHeaders.map(h => ({h, n: normalizeHeaderName(h)}));
+
+      const findHeader = (tests) => {
+        for (const test of tests) {
+          const exact = headers.find(x => x.n === normalizeHeaderName(test));
+          if (exact) return exact.h;
+        }
+        for (const test of tests) {
+          const needle = normalizeHeaderName(test);
+          const partial = headers.find(x => x.n.includes(needle));
+          if (partial) return partial.h;
+        }
+        return null;
+      };
+
+      // Separate GPS columns.
+      const lat = findHeader([
+        "Latitude", "GPS Latitude", "GPS Lat", "Lat", "Lat."
+      ]);
+      const lon = findHeader([
+        "Longitude", "GPS Longitude", "GPS Long", "GPS Lng",
+        "Long", "Lon", "Lng", "Long."
+      ]);
+
+      // Common single-column GPS formats such as:
+      // "GPS", "GPS Coordinates", "GPS Location", "Latitude, Longitude".
+      let combined = findHeader([
+        "GPS", "GPS Coordinates", "GPS Coordinate", "GPS Location",
+        "Coordinates", "Coordinate", "Lat Long", "Lat Long Coordinates",
+        "Latitude Longitude", "Latitude Longitude Coordinates",
+        "Lat/Long", "Lat,Long"
+      ]);
+
+      // If no named combined column exists, inspect the column headers for
+      // a strong GPS/location/coordinate name.
+      if (!combined) {
+        combined = headers.find(x =>
+          /gps|coordinate|latlong|latitude.*longitude|longitude.*latitude|location/.test(x.n)
+        )?.h || null;
+      }
+
+      return {lat, lon, combined};
+    }
+
+    function parseGpsPair(value){
+      if(value === null || value === undefined) return null;
+      const raw = String(value).trim();
+      if(!raw) return null;
+
+      // Google Maps / map URL formats: @lat,long or ?q=lat,long
+      const urlMatch = raw.match(/@(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)/);
+      if(urlMatch){
+        const a = Number(urlMatch[1]), b = Number(urlMatch[2]);
+        if(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a)<=90 && Math.abs(b)<=180){
+          return {lat:a, lon:b};
+        }
+      }
+
+      const qMatch = raw.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?)[,%20\s]+(-?\d+(?:\.\d+)?)/i);
+      if(qMatch){
+        const a = Number(qMatch[1]), b = Number(qMatch[2]);
+        if(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a)<=90 && Math.abs(b)<=180){
+          return {lat:a, lon:b};
+        }
+      }
+
+      // Standard "lat, lon", "lat; lon", "(lat lon)" formats.
+      const pair = raw
+        .replace(/[()\[\]]/g," ")
+        .match(/(-?\d+(?:\.\d+)?)\s*(?:°)?\s*(?:,|;|\||\/|\s)\s*(-?\d+(?:\.\d+)?)/);
+      if(pair){
+        const a = Number(pair[1]), b = Number(pair[2]);
+        if(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a)<=90 && Math.abs(b)<=180){
+          return {lat:a, lon:b};
+        }
+      }
+
+      // N/S/E/W suffix form, e.g. "31.5204 N, 74.3587 E".
+      const dms = raw.match(/(-?\d+(?:\.\d+)?)\s*°?\s*([NS])\s*[,;\/\s]+\s*(-?\d+(?:\.\d+)?)\s*°?\s*([EW])/i);
+      if(dms){
+        let a = Number(dms[1]), b = Number(dms[3]);
+        if(dms[2].toUpperCase()==="S") a = -Math.abs(a);
+        if(dms[4].toUpperCase()==="W") b = -Math.abs(b);
+        if(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a)<=90 && Math.abs(b)<=180){
+          return {lat:a, lon:b};
+        }
+      }
+
+      return null;
+    }
+
+    function parseGpsCoordinateValue(value){
+      if(value === null || value === undefined || String(value).trim()==="") return null;
+      if(typeof value === "number" && Number.isFinite(value)) return value;
+
+      const text = String(value).trim().replace(/[()]/g,"");
+      const direct = Number(text.replace(/,/g,""));
+      if(Number.isFinite(direct)) return direct;
+
+      const m = text.match(/(-?\d+(?:\.\d+)?)\s*°?\s*([NSEW])?/i);
+      if(!m) return null;
+
+      let n = Number(m[1]);
+      if(!Number.isFinite(n)) return null;
+
+      const dir = (m[2] || "").toUpperCase();
+      if(dir==="S" || dir==="W") n = -Math.abs(n);
+      return n;
+    }
+
+    function getGpsPointFromRow(row, fields){
+      // Preferred: separate latitude/longitude columns.
+      if(fields.lat && fields.lon){
+        const lat = parseGpsCoordinateValue(row[fields.lat]);
+        const lon = parseGpsCoordinateValue(row[fields.lon]);
+        if(lat !== null && lon !== null && Math.abs(lat)<=90 && Math.abs(lon)<=180){
+          return {lat, lon, source:`${fields.lat} + ${fields.lon}`};
+        }
+      }
+
+      // Single GPS/coordinate column.
+      if(fields.combined){
+        const pair = parseGpsPair(row[fields.combined]);
+        if(pair) return {...pair, source:fields.combined};
+      }
+
+      // Final fallback: inspect every field in the row for a coordinate pair.
+      for(const header of globalHeaders){
+        const value = row[header];
+        const pair = parseGpsPair(value);
+        if(pair) return {...pair, source:header};
+      }
+
+      return null;
+    }
+
+    function clearKmzRoute() {
+      if (!gpsMap) return;
+      kmzRouteLayers.forEach(layer => {
+        try { gpsMap.removeLayer(layer); } catch (e) {}
+      });
+      kmzRouteLayers = [];
+      kmzRouteFitBounds = [];
+      const notice = document.getElementById("gpsMapNotice");
+      if (notice) notice.textContent = "KMZ/KML route cleared. Upload a route to overlay network path on the joint GPS map.";
+    }
+
+    function cleanKmlCoordinates(text) {
+      return String(text || "")
+        .trim()
+        .split(/\s+/)
+        .map(token => {
+          const parts = token.split(",").map(Number);
+          if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+            return [parts[1], parts[0]]; // Leaflet expects [lat, lon]
+          }
+          return null;
+        })
+        .filter(Boolean);
+    }
+
+    function extractKmlRoutes(kmlText) {
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(kmlText, "application/xml");
+      const parserError = xml.querySelector("parsererror");
+      if (parserError) throw new Error("The KML inside the KMZ is not valid XML.");
+
+      const routes = [];
+
+      // Standard KML LineString routes.
+      xml.querySelectorAll("LineString coordinates").forEach(node => {
+        const points = cleanKmlCoordinates(node.textContent);
+        if (points.length >= 2) routes.push(points);
+      });
+
+      // KML MultiGeometry can contain several LineStrings; already handled above.
+
+      // Google Earth gx:Track format: <gx:coord>lon lat alt</gx:coord>
+      xml.querySelectorAll("Track, gx\\:Track").forEach(track => {
+        const points = [];
+        track.querySelectorAll("coord, gx\\:coord").forEach(node => {
+          const parts = String(node.textContent || "").trim().split(/\s+/).map(Number);
+          if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+            points.push([parts[1], parts[0]]);
+          }
+        });
+        if (points.length >= 2) routes.push(points);
+      });
+
+      // Some field-generated KML stores a route in gx:MultiTrack.
+      xml.querySelectorAll("MultiTrack, gx\\:MultiTrack").forEach(multi => {
+        multi.querySelectorAll("Track, gx\\:Track").forEach(track => {
+          const points = [];
+          track.querySelectorAll("coord, gx\\:coord").forEach(node => {
+            const parts = String(node.textContent || "").trim().split(/\s+/).map(Number);
+            if (parts.length >= 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+              points.push([parts[1], parts[0]]);
+            }
+          });
+          if (points.length >= 2) routes.push(points);
+        });
+      });
+
+      return routes;
+    }
+
+    async function loadKmzRoute(file) {
+      initGpsMap();
+      if (!gpsMap) throw new Error("GPS map is not available.");
+
+      clearKmzRoute();
+      const notice = document.getElementById("gpsMapNotice");
+      if (notice) notice.textContent = `Reading route file: ${file.name} ...`;
+
+      const lowerName = file.name.toLowerCase();
+      let kmlText = "";
+
+      if (lowerName.endsWith(".kml")) {
+        kmlText = await file.text();
+      } else {
+        if (typeof JSZip === "undefined") throw new Error("KMZ support library could not be loaded. Please check internet access and reopen the dashboard.");
+        const zip = await JSZip.loadAsync(await file.arrayBuffer());
+        const kmlEntries = Object.values(zip.files).filter(entry => !entry.dir && entry.name.toLowerCase().endsWith(".kml"));
+        if (!kmlEntries.length) throw new Error("No KML file was found inside the KMZ.");
+
+        const preferred = kmlEntries.find(entry => entry.name.toLowerCase().endsWith("doc.kml")) || kmlEntries[0];
+        kmlText = await preferred.async("text");
+      }
+
+      const routes = extractKmlRoutes(kmlText);
+      if (!routes.length) throw new Error("No route LineString/Track was found in the KMZ/KML file.");
+
+      const allPoints = [];
+      routes.forEach((points, index) => {
+        const layer = L.polyline(points, {
+          color: "#0b6fa4",
+          weight: 4,
+          opacity: 0.90,
+          lineJoin: "round",
+          lineCap: "round"
+        }).addTo(gpsMap);
+
+        layer.bindTooltip(`KMZ Route ${index + 1}`, {sticky: true, opacity: 0.9});
+        kmzRouteLayers.push(layer);
+        points.forEach(p => allPoints.push(p));
+      });
+
+      kmzRouteFitBounds = allPoints.slice();
+      if (allPoints.length) gpsMap.fitBounds(L.latLngBounds(allPoints).pad(.08));
+
+      if (notice) notice.textContent = `${routes.length} route segment${routes.length === 1 ? "" : "s"} loaded from ${file.name}. Blue line = KMZ route; × = joint GPS locations.`;
+    }
+
+    function renderGpsLocationsOnly(data){
+      const fields = getGpsMapFields();
+      const status = document.getElementById("gpsMapStatus");
+      initGpsMap();
+      if(!gpsMap) return;
+
+      gpsMapMarkers.forEach(m => gpsMap.removeLayer(m));
+      gpsMapMarkers = [];
+
+      const points = [];
+      let detectedSource = "";
+
+      (data || []).forEach((row,index) => {
+        const point = getGpsPointFromRow(row, fields);
+        if(!point) return;
+
+        points.push({...point, row, index});
+        if(!detectedSource) detectedSource = point.source;
+      });
+
+      if(!points.length){
+        status.textContent =
+          "No valid GPS coordinates found. Supported formats: separate Latitude/Longitude columns or a single GPS/Coordinates column containing lat,long.";
+        gpsMap.setView([31.5204,74.3587],11);
+        return;
+      }
+
+      status.textContent =
+        `${points.length.toLocaleString()} joint GPS locations marked with × • Source: ${detectedSource}`;
+
+      const bounds = [];
+
+      points.forEach((p,i) => {
+        bounds.push([p.lat,p.lon]);
+
+        const crossIcon = L.divIcon({
+          className:"joint-cross-marker",
+          html:"×",
+          iconSize:[24,24],
+          iconAnchor:[12,12]
+        });
+
+        const marker = L.marker([p.lat,p.lon],{
+          icon:crossIcon,
+          keyboard:true,
+          title:`Joint GPS ${i+1} — ${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}`
+        }).addTo(gpsMap);
+
+        marker.bindTooltip(
+          `Joint GPS ${i+1}<br>Lat: ${p.lat.toFixed(6)}<br>Lon: ${p.lon.toFixed(6)}`,
+          {direction:"top", offset:[0,-8], opacity:0.95}
+        );
+
+        gpsMapMarkers.push(marker);
+      });
+
+      gpsMap.fitBounds(L.latLngBounds(bounds).pad(.08));
+    }
+
+    function initGpsMap(){
+      const el=document.getElementById("gpsMap");
+      const notice=document.getElementById("gpsMapNotice");
+      if(!el) return;
+      if(typeof L==="undefined"){
+        if(notice) notice.textContent="Map library could not be loaded. Check your internet connection.";
+        return;
+      }
+      if(gpsMap) return;
+
+      gpsMap=L.map(el,{zoomControl:true}).setView([31.5204,74.3587],11);
+      if(notice) notice.textContent="Map background loaded from a public basemap service.";
+      // Use a more reliable public basemap first, with OSM fallback.
+      const primaryTiles = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 19, attribution: "Tiles &copy; Esri" }
+      ).addTo(gpsMap);
+
+      const osmFallback = L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
+      );
+
+      let tileFallbackActivated = false;
+      primaryTiles.on("tileerror", function () {
+        if (tileFallbackActivated) return;
+        tileFallbackActivated = true;
+        try { gpsMap.removeLayer(primaryTiles); } catch (e) {}
+        osmFallback.addTo(gpsMap);
+      });
+    }
+
+    function renderGpsJointFrequencyChart(clusters){
+      if(gpsJointFrequencyChartInst)gpsJointFrequencyChartInst.destroy();
+      const top=[...clusters].sort((a,b)=>b.faults-a.faults).slice(0,10);
+      gpsJointFrequencyChartInst=new Chart(document.getElementById("gpsJointFrequencyChart"),{type:"bar",data:{labels:top.map(c=>c.jointLabel),datasets:[{label:"Fault Frequency",data:top.map(c=>c.faults),backgroundColor:"#d63c3c"}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false}}}}});
+    }
+
+    function renderGpsSectionDensityChart(sections){
+      if(gpsSectionDensityChartInst)gpsSectionDensityChartInst.destroy();
+      const top=sections.slice(0,10),hasLength=sections.some(s=>s.length);
+      gpsSectionDensityChartInst=new Chart(document.getElementById("gpsSectionDensityChart"),{type:"bar",data:{labels:top.map(s=>s.section),datasets:[{label:hasLength?"Joints / km":"Joint Count",data:top.map(s=>s.density),backgroundColor:"#6b4b81"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{grid:{display:false}}}}});
+    }
+
+    function renderGpsHotspotTable(clusters,threshold){
+      const body=document.getElementById("gpsHotspotTableBody");if(!body)return;
+      const hot=clusters.filter(c=>c.faults>=threshold).sort((a,b)=>b.faults-a.faults).slice(0,15);
+      body.innerHTML=hot.length?hot.map((c,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(c.section)}</td><td>${escapeHtml(c.jointLabel)}</td><td>${c.center.lat.toFixed(6)}</td><td>${c.center.lon.toFixed(6)}</td><td><strong>${c.faults}</strong></td><td>${c.resolved}/${c.faults} resolved</td><td><span class="gps-badge repeat">Repeat Hotspot</span></td></tr>`).join(""):`<tr><td colspan="8" class="gps-empty">No repeat-fault GPS hotspots found at the selected threshold.</td></tr>`;
+    }
+
+    function renderGpsSectionTable(sections){
+      const body=document.getElementById("gpsSectionTableBody");if(!body)return;
+      const top=sections.slice(0,20);
+      body.innerHTML=top.length?top.map((s,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(s.section)}</td><td>${s.joints}</td><td>${s.faults}</td><td>${s.faultsPerJoint.toFixed(2)}</td><td>${s.length?s.length.toFixed(2)+" km":"Not provided"}</td><td>${s.length?s.density.toFixed(2)+" / km":s.density.toFixed(0)+" joints"}</td><td>${s.repeats}</td></tr>`).join(""):`<tr><td colspan="8" class="gps-empty">No section data available from GPS records.</td></tr>`;
+    }
+
+    function renderGpsReviewTable(clusters,sections){
+      const body=document.getElementById("gpsReviewTableBody");if(!body)return;
+      const map={};sections.forEach(s=>map[s.section]=s);
+      const items=clusters.map(c=>{
+        const s=map[c.section];
+        const sectionHigh=!!(s&&s.highDensity);
+        const faultRate=s&&s.joints?s.faults/s.joints:c.faults;
+        const reviewScore=(c.faults*3)+(sectionHigh?5:0)+(faultRate*2);
+        let action="Monitor / Validate";
+        if(c.faults>=2&&sectionHigh)action="Priority: joint + section assessment";
+        else if(c.faults>=2)action="Repeat-fault assessment";
+        else if(sectionHigh)action="High-density section review";
+        return {...c,sectionJoints:s?s.joints:0,faultRate,sectionDensity:s?s.density:0,sectionHigh,reviewScore,action};
+      }).filter(c=>c.faults>=2||c.sectionHigh).sort((a,b)=>b.reviewScore-a.reviewScore).slice(0,20);
+      if(!items.length){body.innerHTML=`<tr><td colspan="8" class="gps-empty">No locations meet the current repeat-fault / high-density review criteria.</td></tr>`;return;}
+      body.innerHTML=items.map((c,i)=>`<tr><td><strong>${i+1}</strong></td><td>${escapeHtml(c.section)}</td><td>${escapeHtml(c.jointLabel)}</td><td>${c.faults}</td><td>${c.sectionJoints}</td><td>${c.faultRate.toFixed(2)}</td><td>${c.sectionDensity?c.sectionDensity.toFixed(2):"—"}</td><td><span class="gps-badge focus">${c.sectionHigh&&c.faults>=2?"Priority Review":c.action}</span></td></tr>`).join("");
+    }
+
+    // --- PRO VERSION GRAPHICAL REPORT (PICTURE) ---
+    function classifyFaultStatus(value) {
+      const s = String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+      // Treat all common restoration/completion terms as RESTORED.
+      if (/resolved|restored|restore|closed|close|done|completed|complete|fixed|rectified|clear|cleared|repaired|resolved successfully|fault cleared/.test(s)) return 'restored';
+      // Everything else is PENDING, including blank status values.
+      return 'pending';
+    }
+
+    function findBestHeader(patterns) {
+      const headers = globalHeaders || [];
+      for (const p of patterns) {
+        const exact = headers.find(h => String(h).trim().toLowerCase() === p.toLowerCase());
+        if (exact) return exact;
+      }
+      for (const p of patterns) {
+        const found = headers.find(h => String(h).toLowerCase().includes(p.toLowerCase()));
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function generateProSummary() {
+      const data = currentFilteredData || [];
+      if (!data.length) {
+        alert('No fault data is available yet. Please click Refresh Data and wait for the data to load.');
+        return;
+      }
+
+      // Flexible header detection so the report works with the actual Google Sheet headers.
+      const statusKey = findBestHeader(['status', 'fault status', 'fault_status', 'current status', 'fault state', 'state']);
+      const domainKey = findBestHeader(['domain', 'fmc domain', 'fmc_domain', 'domain name', 'area/domain']) || globalHeaders[3];
+
+      let restored = 0;
+      let pending = 0;
+      const domainStats = {};
+
+      data.forEach(row => {
+        const status = classifyFaultStatus(statusKey ? row[statusKey] : '');
+        const domain = domainKey ? String(row[domainKey] ?? '').trim() : '';
+        const domainName = domain || 'Unknown / Not Specified';
+
+        if (!domainStats[domainName]) domainStats[domainName] = { total: 0, restored: 0, pending: 0 };
+        domainStats[domainName].total++;
+
+        if (status === 'restored') {
+          restored++;
+          domainStats[domainName].restored++;
+        } else {
+          pending++;
+          domainStats[domainName].pending++;
+        }
+      });
+
+      const total = data.length;
+      const rate = total ? Math.round((restored / total) * 100) : 0;
+      const domains = Object.keys(domainStats).sort((a,b) => {
+        const diff = domainStats[b].total - domainStats[a].total;
+        return diff || a.localeCompare(b);
+      });
+
+      const rows = domains.map(d => {
+        const x = domainStats[d];
+        return `<tr>
+          <td>${escapeHtml(d)}</td>
+          <td>${x.total}</td>
+          <td class="ok">${x.restored}</td>
+          <td class="warn">${x.pending}</td>
+        </tr>`;
+      }).join('');
+
+      const statusNote = statusKey
+        ? `Status column: ${escapeHtml(statusKey)}`
+        : 'No status column detected — records are treated as Pending.';
+
+      const modal = document.getElementById('reportModal');
+      modal.innerHTML = `
+        <div class="modal-content pro-report-modal">
+          <div class="modal-header">
+            <h2><i class="fa-solid fa-image" style="color:#0b6fa4;"></i> Pro Daily Summary (Picture Format)</h2>
+            <span class="close-btn" onclick="document.getElementById('reportModal').style.display='none'">&times;</span>
+          </div>
+          <div id="proReportCard" class="pro-report-card">
+            <div class="pro-report-head">
+              <div class="pro-brand">PTCL <span>| LTR-N</span></div>
+              <div class="pro-title">DAILY FAULT OPERATIONS SUMMARY</div>
+              <div class="pro-date">${formattedDate}</div>
+            </div>
+
+            <div class="pro-kpis">
+              <div><small>TOTAL FAULTS</small><strong>${total}</strong></div>
+              <div><small>RESTORED</small><strong class="okText">${restored}</strong></div>
+              <div><small>PENDING</small><strong class="warnText">${pending}</strong></div>
+              <div><small>RESTORATION %</small><strong>${rate}%</strong></div>
+            </div>
+
+            <div class="pro-section-title">DOMAIN-WISE FAULT SUMMARY</div>
+            <table class="pro-domain-table">
+              <thead>
+                <tr><th>DOMAIN</th><th>TOTAL FAULTS</th><th>RESTORED</th><th>PENDING</th></tr>
+              </thead>
+              <tbody>${rows || '<tr><td colspan="4">No domain data available</td></tr>'}</tbody>
+            </table>
+
+            <div class="pro-footer">
+              ${statusNote}<br>
+              NETWORK SERVICES - LTR NORTH<br>
+              <span>Compiled by: Engr. Mr. Shahzaib Ali Khan</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-green" onclick="downloadProReportPicture()"><i class="fa-solid fa-download"></i> Download Picture for WhatsApp</button>
+          </div>
+        </div>`;
+      modal.style.display = 'flex';
+    }
+
+    async function downloadProReportPicture() {
+      const card = document.getElementById('proReportCard');
+      if (!card) return alert('Please generate the Pro Daily Summary first.');
+      try {
+        const canvas = await html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, logging: false, imageTimeout: 15000 });
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = `PTCL_LTRN_Daily_Summary_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = dataUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => link.remove(), 1000);
+      } catch (err) {
+        console.error('Pro summary download error:', err);
+        alert('Picture generation failed. Please try again in Chrome/Edge.');
+      }
+    }
+
+    function downloadInfographic() { return downloadProReportPicture(); }
+
+  window.addEventListener('load', function(){ setTimeout(refreshData, 500); });
+  </script>
+</body>
+</html>
