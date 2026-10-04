@@ -145,6 +145,10 @@
 
     /* Footer Attribution */
     .attribution-text { position: fixed; bottom: 10px; right: 20px; color: #8a8886; font-size: 10px; font-weight: 600; text-align: right; z-index: 50; }
+  
+    .management-banner{margin:10px 20px 0;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1b8738;border-radius:4px;font-size:11px;color:#475569;font-weight:600;}
+  
+    .pro-report-modal{max-width:620px!important;max-height:92vh;overflow:auto}.pro-report-card{width:100%;background:#fff;border:1px solid #dbe3ea;box-sizing:border-box;font-family:Segoe UI,Arial,sans-serif}.pro-report-head{background:#07263b;padding:20px;text-align:center;border-bottom:5px solid #8ac249}.pro-brand{font-size:27px;font-weight:900;color:#fff;letter-spacing:1px}.pro-brand span{color:#8ac249;font-weight:400}.pro-title{margin-top:6px;color:#d8e5f0;font-size:13px;font-weight:800;letter-spacing:1px}.pro-date{margin-top:5px;color:#d8e5f0;font-size:11px}.pro-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px;background:#f8fafc}.pro-kpis div{text-align:center;border:1px solid #e2e8f0;border-radius:5px;padding:10px 5px;background:#fff}.pro-kpis small{display:block;font-size:8px;font-weight:800;color:#64748b}.pro-kpis strong{display:block;font-size:23px;color:#07263b;margin-top:3px}.okText,.pro-domain-table .ok{color:#00a04a!important}.warnText,.pro-domain-table .warn{color:#e8981c!important}.pro-section-title{font-size:12px;font-weight:900;color:#475569;padding:12px 14px 7px;letter-spacing:.7px}.pro-domain-table{width:calc(100% - 28px);margin:0 14px 15px;border-collapse:collapse;font-size:10px}.pro-domain-table th{background:#07263b;color:#fff;padding:8px;text-align:center}.pro-domain-table th:first-child{text-align:left}.pro-domain-table td{padding:8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700}.pro-domain-table td:first-child{text-align:left}.pro-footer{text-align:center;background:#f8fafc;border-top:1px solid #e2e8f0;padding:10px;color:#07263b;font-size:9px;font-weight:800}.pro-footer span{color:#64748b;font-weight:600}@media(max-width:650px){.pro-kpis{grid-template-columns:repeat(2,1fr)}}
   </style>
 </head>
 <body>
@@ -191,21 +195,15 @@
           </div>
         </div>
 
-        <!-- Domain-wise Status Breakdown -->
-        <div style="margin-top: 4px;">
-          <h4 style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 0 0 10px 0;">Domain-wise Daily Status</h4>
-          <div style="border:1px solid #e2e8f0; border-radius:6px; overflow:hidden;">
-            <table style="width:100%; border-collapse:collapse; font-size:12px;">
-              <thead>
-                <tr style="background:#f1f5f9;">
-                  <th style="padding:8px 7px; text-align:left; color:#334155;">Domain</th>
-                  <th style="padding:8px 5px; text-align:center; color:#334155;">Total</th>
-                  <th style="padding:8px 5px; text-align:center; color:#15803d;">Resolved</th>
-                  <th style="padding:8px 5px; text-align:center; color:#b45309;">In Progress</th>
-                </tr>
-              </thead>
-              <tbody id="infoDomainRows"></tbody>
-            </table>
+        <!-- Breakdown Lists -->
+        <div style="display: flex; gap: 20px;">
+          <div style="flex: 1;">
+            <h4 style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 0 0 12px 0;">Top Domains</h4>
+            <div id="infoDomains" style="font-size: 14px; color: #1e293b;"></div>
+          </div>
+          <div style="flex: 1;">
+            <h4 style="font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 0 0 12px 0;">Top Teams</h4>
+            <div id="infoTeams" style="font-size: 14px; color: #1e293b;"></div>
           </div>
         </div>
       </div>
@@ -228,25 +226,24 @@
       </div>
     </div>
     <div class="tab-container" id="tabsArea" style="display: none;">
-      <button class="tab-btn active" onclick="switchTab('dashboardTab', this)"><i class="fa-solid fa-chart-line"></i> Analytical View</button>
+      <button class="tab-btn active" onclick="switchTab('dashboardTab', this)"><i class="fa-solid fa-chart-line"></i> Analytics View</button>
       <button class="tab-btn" onclick="switchTab('gpsTab', this)"><i class="fa-solid fa-location-dot"></i> GPS Location Map</button>
       <button class="tab-btn" onclick="switchTab('logsTab', this)"><i class="fa-solid fa-table"></i> Data Table View</button>
     </div>
   </header>
 
-  <!-- Management / Read-only Toolbar -->
+  <!-- Toolbar -->
   <nav class="toolbar">
     <div class="toolbar-actions">
-      <div style="font-size:11px; color:#0b6fa4; font-weight:700; padding:7px 10px; background:#eef7fb; border:1px solid #cfe5ef; border-radius:3px;">
-        <i class="fa-solid fa-lock"></i> MANAGEMENT VIEW — READ ONLY
-      </div>
       <button class="btn btn-blue" onclick="refreshData();"><i class="fa-solid fa-arrows-rotate"></i> Refresh Data</button>
     </div>
     <div class="toolbar-actions">
-      <div id="statusFilename" style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-right: 15px;">Connecting to Live Google Sheet...</div>
+      <div id="statusFilename" style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-right: 15px;">Awaiting Data...</div>
       <button class="btn btn-dark" onclick="generateProSummary()" id="reportBtn" style="display:none;"><i class="fa-solid fa-image"></i> Share Daily Summary (Pro)</button>
     </div>
   </nav>
+
+  <div class="management-banner"><i class="fa-solid fa-eye"></i> Management View — Live Google Sheet data • Read Only</div>
 
   <!-- KPI Cards -->
   <div class="kpi-container">
@@ -329,14 +326,7 @@
           <h2><i class="fa-solid fa-location-dot"></i> Joint GPS Location Map</h2>
           <div class="gps-map-only-subtitle" id="gpsMapStatus">Each × marks a joint GPS location from the loaded Excel / Google Sheet data</div>
         </div>
-        <div class="gps-route-controls">
-          <button class="btn btn-green" type="button" onclick="document.getElementById('kmzFileInput').click();">
-            <i class="fa-solid fa-route"></i> Upload KMZ Route
-          </button>
-          <button class="btn btn-steel" type="button" onclick="clearKmzRoute();">
-            <i class="fa-solid fa-xmark"></i> Clear Route
-          </button>
-        </div>
+        <div class="gps-route-controls"><span style="font-size:10px;color:var(--text-muted);font-weight:600;">Management View • Read Only</span></div>
       </div>
       <div id="gpsMap" class="gps-map gps-map-only"></div>
       <div id="gpsMapNotice" class="gps-map-notice">Upload a KMZ/KML route to overlay the network route on the joint GPS map.</div>
@@ -377,9 +367,7 @@
   <div class="attribution-text">Compiled and designed by : Engr. Mr. Shahzaib Ali Khan</div>
 
   <script>
-    // Management copy: viewers cannot change the data source from this page.
-    const MANAGEMENT_SHEET_URL = "https://docs.google.com/spreadsheets/d/1-xZROqLMnz9eIsUJ6ydo7vRKsLDRm606j-EptDi3YXY/edit?usp=sharing";
-    let currentOnlineUrl = MANAGEMENT_SHEET_URL;
+    let currentOnlineUrl = "";
     let globalRawData = [];
     let currentFilteredData = [];
     let globalHeaders = [];
@@ -394,19 +382,42 @@
     let kmzRouteLayers = [];
     let kmzRouteFitBounds = [];
 
+    // Management View: fixed live Google Sheet data source
+    const MANAGEMENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1-xZROqLMnz9eIsUJ6ydo7vRKsLDRm606j-EptDi3YXY/edit?usp=sharing';
+
     const today = new Date();
     const formattedDate = today.toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Safe text helper used by the Pro Daily Summary.
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>\"']/g, function(ch) {
+        return {"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;", "'":"&#39;"}[ch];
+      });
+    }
     document.getElementById("currentDateDisplay").innerText = formattedDate;
 
-    function switchTab(tabId, btn) {
+    function switchTab(tabId) {
       document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
-      if (btn) btn.classList.add('active');
+      event.currentTarget.classList.add('active');
       if(tabId === 'gpsTab' && gpsMap) setTimeout(() => gpsMap.invalidateSize(), 80);
     }
 
-    // Local Excel upload is intentionally not exposed in the management copy.
+    // --- Local Excel Upload ---
+    document.getElementById("excelFileInput").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      currentOnlineUrl = ""; 
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const workbook = XLSX.read(evt.target.result, { type: "array" });
+          parseWorkbook(workbook, `Local File: ${file.name}`);
+        } catch (err) { alert("Error parsing file: " + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
 
     // --- KMZ / KML ROUTE UPLOAD ---
     document.getElementById("kmzFileInput").addEventListener("change", async function(e) {
@@ -424,15 +435,15 @@
       }
     });
 
-    // --- GOOGLE SHEETS LOGIC (MANAGEMENT COPY) ---
-    function refreshData() {
-      fetchOnlineData(MANAGEMENT_SHEET_URL);
+    // --- GOOGLE SHEETS LOGIC (BULLETPROOF JSONP BYPASS) ---
+    function promptExcelUrl() {
+      alert("Management View is read-only. The Google Sheet data source is fixed by the administrator.");
     }
 
-    // Automatically load the live Google Sheet when the management page opens.
-    window.addEventListener("load", function() {
+    function refreshData() {
+      currentOnlineUrl = MANAGEMENT_SHEET_URL;
       fetchOnlineData(MANAGEMENT_SHEET_URL);
-    });
+    }
 
     function getStandardSheetInfo(userUrl) {
       let url;
@@ -1185,81 +1196,144 @@
     }
 
     // --- PRO VERSION GRAPHICAL REPORT (PICTURE) ---
+    function classifyFaultStatus(value) {
+      const s = String(value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+      // Treat all common restoration/completion terms as RESTORED.
+      if (/resolved|restored|restore|closed|close|done|completed|complete|fixed|rectified|clear|cleared|repaired|resolved successfully|fault cleared/.test(s)) return 'restored';
+      // Everything else is PENDING, including blank status values.
+      return 'pending';
+    }
+
+    function findBestHeader(patterns) {
+      const headers = globalHeaders || [];
+      for (const p of patterns) {
+        const exact = headers.find(h => String(h).trim().toLowerCase() === p.toLowerCase());
+        if (exact) return exact;
+      }
+      for (const p of patterns) {
+        const found = headers.find(h => String(h).toLowerCase().includes(p.toLowerCase()));
+        if (found) return found;
+      }
+      return null;
+    }
+
     function generateProSummary() {
-      if (currentFilteredData.length === 0) return alert("No data available.");
-
-      const data = currentFilteredData;
-      const total = data.length;
-      const statusKey = globalHeaders.find(h => h.toLowerCase().includes("status"));
-      let resCount = 0; let progCount = 0;
-
-      if (statusKey) {
-        data.forEach(row => {
-          const val = String(row[statusKey] ?? "").trim().toLowerCase();
-          if (val.includes("resolved") || val === "restored" || val === "done") resCount++;
-          else if (val !== "") progCount++;
-        });
+      const data = currentFilteredData || [];
+      if (!data.length) {
+        alert('No fault data is available yet. Please click Refresh Data and wait for the data to load.');
+        return;
       }
 
-      const rate = total > 0 ? Math.round((resCount / total) * 100) : 0;
+      // Flexible header detection so the report works with the actual Google Sheet headers.
+      const statusKey = findBestHeader(['status', 'fault status', 'fault_status', 'current status', 'fault state', 'state']);
+      const domainKey = findBestHeader(['domain', 'fmc domain', 'fmc_domain', 'domain name', 'area/domain']) || globalHeaders[3];
 
-      // Populate main KPI section.
-      document.getElementById("infoDate").innerText = formattedDate;
-      document.getElementById("infoTotal").innerText = total;
-      document.getElementById("infoRes").innerText = resCount;
-      document.getElementById("infoProg").innerText = progCount;
-      document.getElementById("infoRate").innerText = rate + "%";
-      document.getElementById("infoBar").style.width = rate + "%";
-
-      // Domain-wise: Total / Resolved / In Progress for ALL domains.
-      const domainKey = globalHeaders.find(h => h.toLowerCase().trim() === "domain") ||
-                        globalHeaders.find(h => h.toLowerCase().includes("domain"));
+      let restored = 0;
+      let pending = 0;
       const domainStats = {};
 
       data.forEach(row => {
-        const domain = domainKey ? (String(row[domainKey] ?? "").trim() || "Unknown") : "All Activities";
-        if (!domainStats[domain]) domainStats[domain] = { total: 0, resolved: 0, progress: 0 };
-        domainStats[domain].total++;
+        const status = classifyFaultStatus(statusKey ? row[statusKey] : '');
+        const domain = domainKey ? String(row[domainKey] ?? '').trim() : '';
+        const domainName = domain || 'Unknown / Not Specified';
 
-        const status = statusKey ? String(row[statusKey] ?? "").trim().toLowerCase() : "";
-        if (status.includes("resolved") || status === "restored" || status === "done") domainStats[domain].resolved++;
-        else if (status !== "") domainStats[domain].progress++;
+        if (!domainStats[domainName]) domainStats[domainName] = { total: 0, restored: 0, pending: 0 };
+        domainStats[domainName].total++;
+
+        if (status === 'restored') {
+          restored++;
+          domainStats[domainName].restored++;
+        } else {
+          pending++;
+          domainStats[domainName].pending++;
+        }
       });
 
-      const sortedDomains = Object.keys(domainStats).sort((a,b) => domainStats[b].total - domainStats[a].total || a.localeCompare(b));
-      const rowsEl = document.getElementById("infoDomainRows");
-      rowsEl.innerHTML = sortedDomains.length ? sortedDomains.map(d => {
+      const total = data.length;
+      const rate = total ? Math.round((restored / total) * 100) : 0;
+      const domains = Object.keys(domainStats).sort((a,b) => {
+        const diff = domainStats[b].total - domainStats[a].total;
+        return diff || a.localeCompare(b);
+      });
+
+      const rows = domains.map(d => {
         const x = domainStats[d];
         return `<tr>
-          <td style="padding:7px; border-top:1px solid #e2e8f0; font-weight:700; color:#1e293b;">${escapeHtml(d)}</td>
-          <td style="padding:7px 5px; border-top:1px solid #e2e8f0; text-align:center; font-weight:800; color:#334155;">${x.total}</td>
-          <td style="padding:7px 5px; border-top:1px solid #e2e8f0; text-align:center; font-weight:800; color:#15803d;">${x.resolved}</td>
-          <td style="padding:7px 5px; border-top:1px solid #e2e8f0; text-align:center; font-weight:800; color:#b45309;">${x.progress}</td>
+          <td>${escapeHtml(d)}</td>
+          <td>${x.total}</td>
+          <td class="ok">${x.restored}</td>
+          <td class="warn">${x.pending}</td>
         </tr>`;
-      }).join("") : `<tr><td colspan="4" style="padding:10px;text-align:center;color:#64748b;">No domain data available</td></tr>`;
+      }).join('');
 
-      // Take screenshot of the hidden management summary.
-      const infoCard = document.getElementById("infographicCard");
-      document.getElementById("reportBtn").innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating Picture...`;
+      const statusNote = statusKey
+        ? `Status column: ${escapeHtml(statusKey)}`
+        : 'No status column detected — records are treated as Pending.';
 
-      html2canvas(infoCard, { scale: 2, useCORS: true, backgroundColor: null }).then(canvas => {
-        const imgData = canvas.toDataURL("image/png");
-        document.getElementById("reportImagePreview").src = imgData;
-        document.getElementById('reportModal').style.display = 'flex';
-        document.getElementById("reportBtn").innerHTML = `<i class="fa-solid fa-image"></i> Share Daily Summary (Pro)`;
-      }).catch(err => {
-        console.error(err);
-        alert("Error generating picture.");
-        document.getElementById("reportBtn").innerHTML = `<i class="fa-solid fa-image"></i> Share Daily Summary (Pro)`;
-      });
+      const modal = document.getElementById('reportModal');
+      modal.innerHTML = `
+        <div class="modal-content pro-report-modal">
+          <div class="modal-header">
+            <h2><i class="fa-solid fa-image" style="color:#0b6fa4;"></i> Pro Daily Summary (Picture Format)</h2>
+            <span class="close-btn" onclick="document.getElementById('reportModal').style.display='none'">&times;</span>
+          </div>
+          <div id="proReportCard" class="pro-report-card">
+            <div class="pro-report-head">
+              <div class="pro-brand">PTCL <span>| LTR-N</span></div>
+              <div class="pro-title">DAILY FAULT OPERATIONS SUMMARY</div>
+              <div class="pro-date">${formattedDate}</div>
+            </div>
+
+            <div class="pro-kpis">
+              <div><small>TOTAL FAULTS</small><strong>${total}</strong></div>
+              <div><small>RESTORED</small><strong class="okText">${restored}</strong></div>
+              <div><small>PENDING</small><strong class="warnText">${pending}</strong></div>
+              <div><small>RESTORATION %</small><strong>${rate}%</strong></div>
+            </div>
+
+            <div class="pro-section-title">DOMAIN-WISE FAULT SUMMARY</div>
+            <table class="pro-domain-table">
+              <thead>
+                <tr><th>DOMAIN</th><th>TOTAL FAULTS</th><th>RESTORED</th><th>PENDING</th></tr>
+              </thead>
+              <tbody>${rows || '<tr><td colspan="4">No domain data available</td></tr>'}</tbody>
+            </table>
+
+            <div class="pro-footer">
+              ${statusNote}<br>
+              NETWORK SERVICES - LTR NORTH<br>
+              <span>Compiled by: Engr. Mr. Shahzaib Ali Khan</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-green" onclick="downloadProReportPicture()"><i class="fa-solid fa-download"></i> Download Picture for WhatsApp</button>
+          </div>
+        </div>`;
+      modal.style.display = 'flex';
     }
 
-    function downloadInfographic() {
-      const link = document.createElement('a');
-      link.download = `PTCL_LTRN_Summary_${new Date().toISOString().slice(0,10)}.png`;
-      link.href = document.getElementById("reportImagePreview").src;
-      link.click();
+    async function downloadProReportPicture() {
+      const card = document.getElementById('proReportCard');
+      if (!card) return alert('Please generate the Pro Daily Summary first.');
+      try {
+        const canvas = await html2canvas(card, { scale: 2, backgroundColor: '#ffffff', useCORS: true, allowTaint: true, logging: false, imageTimeout: 15000 });
+        const dataUrl = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        link.download = `PTCL_LTRN_Daily_Summary_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = dataUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => link.remove(), 1000);
+      } catch (err) {
+        console.error('Pro summary download error:', err);
+        alert('Picture generation failed. Please try again in Chrome/Edge.');
+      }
     }
+
+    function downloadInfographic() { return downloadProReportPicture(); }
+
+  window.addEventListener('load', function(){ setTimeout(refreshData, 500); });
   </script>
 </body>
 </html>
